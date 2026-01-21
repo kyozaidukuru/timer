@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>サークルタイマー</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      background: #ffffff;
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5em;
+    }
+    .desc {
+      max-width: 600px;
+      margin: 0 auto 24px;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    svg {
+      width: 320px;
+      max-width: 90vw;
+      height: auto;
+      touch-action: manipulation;
+    }
+    .number {
+      font-size: 14px;
+      fill: black;
+      user-select: none;
+    }
+    .tick {
+      stroke: black;
+      stroke-width: 2;
+    }
+    .tick.small {
+      stroke-width: 1;
+    }
+    .hand {
+      stroke: red;
+      stroke-width: 4;
+      stroke-linecap: round;
+      transform-origin: 50% 50%;
+    }
+    .hand.idle {
+      stroke: gray;
+    }
+    .center-circle {
+      fill: white;
+      stroke: black;
+      stroke-width: 2;
+    }
+    .arc {
+      fill: rgb(51,204,153);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>かんたんに使えるサークルタイマー</h1>
+  <div class="desc">
+    <strong>概要</strong><br>
+    円弧で残り時間を表示するタイマーです。残り時間が直感的にわかります。<br>
+    図りたい時間をクリック・タッチすることで計測が始まります。
+  </div>
+
+  <svg id="timer" viewBox="0 0 300 300">
+    <circle cx="150" cy="150" r="130" fill="none" stroke="black" stroke-width="4"/>
+    <path id="arc" class="arc" d="" />
+    <g id="ticks"></g>
+    <g id="numbers"></g>
+    <line id="hand" class="hand idle" x1="150" y1="150" x2="150" y2="40"/>
+    <circle cx="150" cy="150" r="12" class="center-circle"/>
+  </svg>
+
+<script>
+const svg = document.getElementById("timer");
+const hand = document.getElementById("hand");
+const arc = document.getElementById("arc");
+const ticksGroup = document.getElementById("ticks");
+const numbersGroup = document.getElementById("numbers");
+
+let totalSeconds = 0;
+let remainingSeconds = 0;
+let timerId = null;
+
+const center = { x: 150, y: 150 };
+const radius = 110;
+
+function polarToCartesian(cx, cy, r, angle) {
+  const rad = (angle - 90) * Math.PI / 180.0;
+  return {
+    x: cx + r * Math.cos(rad),
+    y: cy + r * Math.sin(rad)
+  };
+}
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  return [
+    "M", cx, cy,
+    "L", start.x, start.y,
+    "A", r, r, 0, largeArcFlag, 0, end.x, end.y,
+    "Z"
+  ].join(" ");
+}
+
+function drawFace() {
+  for (let i = 0; i < 60; i++) {
+    const angle = i * 6;
+    const isMajor = i % 5 === 0;
+    const r1 = 130;
+    const r2 = isMajor ? 115 : 120;
+    const p1 = polarToCartesian(150,150,r1,angle);
+    const p2 = polarToCartesian(150,150,r2,angle);
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1",p1.x); line.setAttribute("y1",p1.y);
+    line.setAttribute("x2",p2.x); line.setAttribute("y2",p2.y);
+    line.setAttribute("class","tick"+(isMajor?"":" small"));
+    ticksGroup.appendChild(line);
+
+    if (isMajor) {
+      const num = document.createElementNS("http://www.w3.org/2000/svg","text");
+      const np = polarToCartesian(150,150,95,angle);
+      num.setAttribute("x",np.x);
+      num.setAttribute("y",np.y+5);
+      num.setAttribute("text-anchor","middle");
+      num.setAttribute("class","number");
+      num.textContent = i;
+      numbersGroup.appendChild(num);
+    }
+  }
+}
+
+function setHandBySeconds(sec) {
+  const ratio = sec / totalSeconds;
+  const angle = 360 * ratio;
+  hand.setAttribute("transform", `rotate(${-angle} 150 150)`);
+  arc.setAttribute("d", describeArc(150,150,110,0,angle));
+}
+
+function startTimer(minutes) {
+  if (timerId) clearInterval(timerId);
+  totalSeconds = minutes * 60;
+  remainingSeconds = totalSeconds;
+  hand.classList.remove("idle");
+
+  setHandBySeconds(remainingSeconds);
+
+  timerId = setInterval(()=>{
+    remainingSeconds--;
+    if (remainingSeconds <= 0) {
+      clearInterval(timerId);
+      hand.classList.add("idle");
+      arc.setAttribute("d","");
+      remainingSeconds = 0;
+      return;
+    }
+    setHandBySeconds(remainingSeconds);
+  },1000);
+}
+
+svg.addEventListener("pointerdown",(e)=>{
+  const rect = svg.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const dx = x - rect.width/2;
+  const dy = y - rect.height/2;
+  let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+  if (angle < 0) angle += 360;
+  const minute = Math.round(angle / 6);
+  if (minute > 0) startTimer(minute);
+});
+
+drawFace();
+</script>
+
+</body>
+</html>
