@@ -24,6 +24,7 @@
   canvas {
     background: #fff;
     touch-action: none;
+    display: block;
   }
 
   button {
@@ -36,9 +37,7 @@
     cursor: pointer;
   }
 
-  #fullscreenBtn {
-    border-radius: 20px;
-  }
+  #fullscreenBtn { border-radius: 20px; }
 
   #lockBtn.locked {
     background: red;
@@ -51,6 +50,7 @@
     text-align: left;
   }
 
+  /* フルスクリーン用 */
   .fullscreen-mode {
     background: #ffffff;
   }
@@ -92,7 +92,7 @@
   </div>
 
   <div id="timerWrapper">
-    <canvas id="timerCanvas" width="600" height="600"></canvas>
+    <canvas id="timerCanvas"></canvas>
   </div>
 
   <div id="buttons">
@@ -125,6 +125,7 @@ const lockBtn = document.getElementById("lockBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const closeFullscreen = document.getElementById("closeFullscreen");
 const pageRoot = document.getElementById("pageRoot");
+const timerWrapper = document.getElementById("timerWrapper");
 
 // 🔊 音声
 const clickSound = new Audio("click.mp3");
@@ -144,10 +145,18 @@ let locked = false;
 let remainingSeconds = 0;
 let timerId = null;
 
+// ★ 画面サイズに合わせてキャンバスをリサイズ
+function resizeCanvas() {
+  const size = Math.min(timerWrapper.clientWidth, window.innerHeight * 0.8);
+  canvas.width = size;
+  canvas.height = size;
+  drawTimer();
+}
+
 function drawTimer() {
   const w = canvas.width, h = canvas.height;
   const cx = w / 2, cy = h / 2;
-  const r = Math.min(w, h) * 0.42;
+  const r = Math.min(w, h) * 0.40;   // 少し内側寄り
 
   ctx.clearRect(0, 0, w, h);
 
@@ -158,27 +167,27 @@ function drawTimer() {
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
 
-  // 残り時間の円弧（少し内側に）
+  // 残り時間の円弧（さらに少し内側）
   if (remainingSeconds > 0) {
     const angle = (remainingSeconds / 60) * 6 * Math.PI / 180;
     ctx.fillStyle = "rgb(51,204,153)";
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r - 14, -Math.PI / 2, -Math.PI / 2 + angle, false);
+    ctx.arc(cx, cy, r - 16, -Math.PI / 2, -Math.PI / 2 + angle, false);
     ctx.closePath();
     ctx.fill();
   }
 
   // 目盛りと数字
   ctx.fillStyle = "#000";
-  ctx.font = "26px sans-serif";
+  ctx.font = "28px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   for (let i = 0; i < 60; i++) {
     const a = -Math.PI / 2 + i * 2 * Math.PI / 60;
 
-    // ★ メモリ長さを約2倍に
+    // メモリ長さ：2倍
     const tickLen = i % 5 === 0 ? 28 : 16;
 
     const x1 = cx + Math.cos(a) * (r - tickLen);
@@ -192,8 +201,9 @@ function drawTimer() {
     ctx.stroke();
 
     if (i % 5 === 0) {
-      const tx = cx + Math.cos(a) * (r + 46);
-      const ty = cy + Math.sin(a) * (r + 46);
+      // ★ 数字は“内側”に寄せて見切れ防止
+      const tx = cx + Math.cos(a) * (r + 30);
+      const ty = cy + Math.sin(a) * (r + 30);
       ctx.fillText(i.toString(), tx, ty);
     }
   }
@@ -257,13 +267,18 @@ lockBtn.onclick = () => {
 
 fullscreenBtn.onclick = () => {
   pageRoot.classList.add("fullscreen-mode");
+  resizeCanvas(); // フルスクリーン時に再計算
 };
 
 closeFullscreen.onclick = () => {
   pageRoot.classList.remove("fullscreen-mode");
+  resizeCanvas(); // 戻ったときも再計算
 };
 
-drawTimer();
+window.addEventListener("resize", resizeCanvas);
+
+// 初期化
+resizeCanvas();
 </script>
 </body>
 </html>
