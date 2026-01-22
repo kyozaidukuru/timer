@@ -12,7 +12,7 @@
   }
 
   h1 { margin-top: 20px; }
-  .container { max-width: 700px; margin: 0 auto; }
+  .container { max-width: 800px; margin: 0 auto; }
 
   #timerWrapper {
     margin: 20px auto;
@@ -85,13 +85,15 @@
   <h1>残り時間がみえる学習タイマー</h1>
   <div id="desc">
     <p><b>使い方</b></p>
-    <p>学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていきます。<br>
-    一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
-    『固定』ボタンを押すと、時間の変更ができなくなります。</p>
+    <p>
+      学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていくのが見えます。<br>
+      一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
+      『固定』ボタンを押すと、時間の変更ができなくなります。
+    </p>
   </div>
 
   <div id="timerWrapper">
-    <canvas id="timerCanvas" width="500" height="500"></canvas>
+    <canvas id="timerCanvas" width="520" height="520"></canvas>
   </div>
 
   <div id="buttons">
@@ -106,7 +108,7 @@
     <p>
       本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
       本ツールは商用利用を含めてご自由に利用できます。<br>
-      本ツールを利用したことによる、いかなる損害についても開発者は一切の責任を負いません。
+      本ツールを利用したことによるいかなる損害についても開発者は一切の責任を負いません。
     </p>
 
     <h3>権利表記</h3>
@@ -125,6 +127,21 @@ const fullscreenBtn = document.getElementById("fullscreenBtn");
 const closeFullscreen = document.getElementById("closeFullscreen");
 const pageRoot = document.getElementById("pageRoot");
 
+// 🔊 音声
+const clickSound = new Audio("click.mp3");
+const finishSound = new Audio("finish.mp3");
+let audioUnlocked = false;
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  // iOS対策：一瞬だけ再生して止める
+  clickSound.play().then(() => {
+    clickSound.pause();
+    clickSound.currentTime = 0;
+  }).catch(()=>{});
+}
+
 let locked = false;
 let totalSeconds = 0;
 let remainingSeconds = 0;
@@ -132,102 +149,121 @@ let timerId = null;
 
 function drawTimer() {
   const w = canvas.width, h = canvas.height;
-  const cx = w/2, cy = h/2;
-  const r = Math.min(w,h)*0.4;
+  const cx = w / 2, cy = h / 2;
+  const r = Math.min(w, h) * 0.42;
 
-  ctx.clearRect(0,0,w,h);
+  ctx.clearRect(0, 0, w, h);
 
   // 外枠
   ctx.strokeStyle = "#000";
   ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
 
-  // 円弧（残り）
+  // 残り時間の円弧
   if (remainingSeconds > 0) {
-    const angle = (remainingSeconds/60)*6 * Math.PI/180;
+    const angle = (remainingSeconds / 60) * 6 * Math.PI / 180;
     ctx.fillStyle = "rgb(51,204,153)";
     ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r,-Math.PI/2, -Math.PI/2 + angle, false);
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + angle, false);
     ctx.closePath();
     ctx.fill();
   }
 
   // 目盛りと数字
   ctx.fillStyle = "#000";
-  ctx.font = "18px sans-serif";
-  for (let i=0;i<60;i++) {
-    const a = -Math.PI/2 + i*2*Math.PI/60;
-    const x1 = cx + Math.cos(a)*(r-10);
-    const y1 = cy + Math.sin(a)*(r-10);
-    const x2 = cx + Math.cos(a)*(r);
-    const y2 = cy + Math.sin(a)*(r);
+  ctx.font = "22px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (let i = 0; i < 60; i++) {
+    const a = -Math.PI / 2 + i * 2 * Math.PI / 60;
+    const tickLen = i % 5 === 0 ? 14 : 8;
+    const x1 = cx + Math.cos(a) * (r - tickLen);
+    const y1 = cy + Math.sin(a) * (r - tickLen);
+    const x2 = cx + Math.cos(a) * r;
+    const y2 = cy + Math.sin(a) * r;
+
     ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.lineTo(x2,y2);
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
     ctx.stroke();
 
-    if (i%5===0) {
-      const tx = cx + Math.cos(a)*(r+26);
-      const ty = cy + Math.sin(a)*(r+26);
-      ctx.fillText(i.toString(), tx-8, ty+6);
+    if (i % 5 === 0) {
+      const tx = cx + Math.cos(a) * (r + 34);
+      const ty = cy + Math.sin(a) * (r + 34);
+      ctx.fillText(i.toString(), tx, ty);
     }
   }
 
   // 針
-  const a2 = -Math.PI/2 + (remainingSeconds/60)*6*Math.PI/180;
-  ctx.strokeStyle = remainingSeconds>0 ? "red":"gray";
-  ctx.lineWidth = 5;
+  const a2 = -Math.PI / 2 + (remainingSeconds / 60) * 6 * Math.PI / 180;
+  ctx.strokeStyle = remainingSeconds > 0 ? "red" : "gray";
+  ctx.lineWidth = 6;
   ctx.beginPath();
-  ctx.moveTo(cx,cy);
-  ctx.lineTo(cx+Math.cos(a2)*(r-20), cy+Math.sin(a2)*(r-20));
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(a2) * (r - 28), cy + Math.sin(a2) * (r - 28));
   ctx.stroke();
 
-  ctx.fillStyle="#000";
+  // 中心円
+  ctx.fillStyle = "#000";
   ctx.beginPath();
-  ctx.arc(cx,cy,10,0,Math.PI*2);
+  ctx.arc(cx, cy, 12, 0, Math.PI * 2);
   ctx.fill();
 }
 
-canvas.addEventListener("click", e=>{
+canvas.addEventListener("click", e => {
+  unlockAudio();
   if (locked) return;
-  const rect=canvas.getBoundingClientRect();
-  const x=e.clientX-rect.left, y=e.clientY-rect.top;
-  const dx=x-canvas.width/2, dy=y-canvas.height/2;
-  let ang=Math.atan2(dy,dx)+Math.PI/2;
-  if(ang<0)ang+=2*Math.PI;
-  const min=Math.round(ang*60/(2*Math.PI));
-  startTimer(min*60);
+
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const dx = x - canvas.width / 2;
+  const dy = y - canvas.height / 2;
+  let ang = Math.atan2(dy, dx) + Math.PI / 2;
+  if (ang < 0) ang += 2 * Math.PI;
+  const min = Math.round(ang * 60 / (2 * Math.PI));
+  startTimer(min * 60);
 });
 
-function startTimer(sec){
+function startTimer(sec) {
   clearInterval(timerId);
-  totalSeconds=sec;
-  remainingSeconds=sec;
+  totalSeconds = sec;
+  remainingSeconds = sec;
+
+  // 🔊 クリック音
+  clickSound.currentTime = 0;
+  clickSound.play().catch(()=>{});
+
   drawTimer();
-  timerId=setInterval(()=>{
+  timerId = setInterval(() => {
     remainingSeconds--;
-    if(remainingSeconds<=0){
+    if (remainingSeconds <= 0) {
       clearInterval(timerId);
-      remainingSeconds=0;
+      remainingSeconds = 0;
+
+      // 🔔 終了音
+      finishSound.currentTime = 0;
+      finishSound.play().catch(()=>{});
     }
     drawTimer();
-  },1000);
+  }, 1000);
 }
 
-lockBtn.onclick=()=>{
-  locked=!locked;
-  lockBtn.textContent=locked?"固定中":"固定";
-  lockBtn.classList.toggle("locked",locked);
+lockBtn.onclick = () => {
+  locked = !locked;
+  lockBtn.textContent = locked ? "固定中" : "固定";
+  lockBtn.classList.toggle("locked", locked);
 };
 
-fullscreenBtn.onclick=()=>{
+fullscreenBtn.onclick = () => {
   pageRoot.classList.add("fullscreen-mode");
 };
 
-closeFullscreen.onclick=()=>{
+closeFullscreen.onclick = () => {
   pageRoot.classList.remove("fullscreen-mode");
 };
 
