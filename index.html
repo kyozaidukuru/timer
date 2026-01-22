@@ -1,223 +1,194 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>残り時間がみえる学習タイマー</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="iconsmall.png" type="image/png">
+
 <style>
-  :root {
-    --bg: #fff;
-    --fg: #000;
-    --arc: rgb(51,204,153);
-  }
-  body.dark {
-    --bg: #111;
-    --fg: #eee;
-    --arc: rgb(247,148,40);
-  }
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    background: var(--bg);
-    color: var(--fg);
-    text-align: center;
-  }
-  .container { max-width: 900px; margin: 0 auto; }
-  #timerWrapper { margin: 20px auto; display: flex; justify-content: center; }
-  canvas { touch-action: none; display: block; }
-
-  button {
-    margin: 10px;
-    padding: 10px 18px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid var(--fg);
-    background: var(--bg);
-    color: var(--fg);
-    cursor: pointer;
-  }
-  #fullscreenBtn { border-radius: 20px; }
-  #lockBtn.locked { background: red; color: #fff; }
-
-  #closeFullscreen {
-    display: none;
-    position: fixed;
-    top: 10px;
-    right: 14px;
-    font-size: 32px;
-    background: none;
-    border: none;
-    color: var(--fg);
-    z-index: 1000;
-  }
-
-  .fullscreen-mode h1,
-  .fullscreen-mode #desc,
-  .fullscreen-mode #buttons,
-  .fullscreen-mode #credit {
-    display: none;
-  }
-  .fullscreen-mode #closeFullscreen { display: block; }
-
-  #desc, #credit {
-    text-align: left;
-    margin: 20px;
-    font-size: 15px;
-    line-height: 1.6;
-  }
+:root {
+  --bg: #ffffff;
+  --fg: #111;
+  --arc: rgb(51,204,153);
+}
+body.dark {
+  --bg: #111;
+  --fg: #f5f5f5;
+  --arc: rgb(247,148,40);
+}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:sans-serif;
+  text-align:center;
+}
+header {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  margin-top:16px;
+}
+header img { height:48px; }
+#controls {
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin:10px 0;
+}
+button {
+  font-size:16px;
+  padding:8px 16px;
+  border-radius:20px;
+}
+#lockBtn.locked {
+  background:red;
+  color:white;
+}
+canvas { display:block; margin:0 auto; }
+footer {
+  max-width:700px;
+  margin:20px auto;
+  text-align:left;
+  font-size:14px;
+}
 </style>
 </head>
+
 <body>
-<div class="container" id="pageRoot">
+<header>
+  <img src="iconsmall.png">
   <h1>残り時間がみえる学習タイマー</h1>
+  <img src="iconsmall.png">
+</header>
 
-  <div id="desc">
-    <p><b>使い方</b></p>
-    <p>
-      学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていくのが見えます。<br>
-      一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
-      『固定』ボタンを押すと、時間の変更ができなくなります。
-      フルスクリーンやダークモードにも対応しています。
-    </p>
-  </div>
-
-  <div id="timerWrapper">
-    <canvas id="timerCanvas"></canvas>
-  </div>
-
-  <div id="buttons">
-    <button id="darkBtn">🌙 ダーク</button>
-    <button id="fullscreenBtn">フルスクリーン</button>
-    <button id="lockBtn">固定</button>
-  </div>
-
-  <button id="closeFullscreen">×</button>
-
-  <div id="credit">
-    <h3>ご利用について</h3>
-    <p>
-      本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
-      本ツールは商用利用を含めてご自由に利用できます。<br>
-      本ツールを利用したことによるいかなる損害についても開発者は一切の責任を負いません。
-    </p>
-
-    <h3>権利表記</h3>
-    <p>
-      音源はオトロジック(CC BY 4.0)からお借りしました。  
-      <a href="https://otologic.jp/" target="_blank">https://otologic.jp/</a>
-    </p>
-  </div>
+<div id="controls">
+  <button id="fsBtn">フルスクリーン</button>
+  <button id="lockBtn">固定</button>
+  <button id="modeBtn">🌙 ダーク</button>
 </div>
 
+<canvas id="timer"></canvas>
+
+<footer>
+<h3>ご利用について</h3>
+<p>
+本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
+本ツールは商用利用を含めてご自由に利用できます。<br>
+本ツールを利用したことによるいかなる損害についても開発者は一切の責任を負いません。
+</p>
+
+<h3>権利表記</h3>
+<p>
+音源はオトロジック(CC BY 4.0)からお借りしました。  
+<a href="https://otologic.jp/" target="_blank">https://otologic.jp/</a>
+</p>
+</footer>
+
 <script>
-const canvas = document.getElementById("timerCanvas");
+const canvas = document.getElementById("timer");
 const ctx = canvas.getContext("2d");
-const lockBtn = document.getElementById("lockBtn");
-const fullscreenBtn = document.getElementById("fullscreenBtn");
-const darkBtn = document.getElementById("darkBtn");
-const closeFullscreen = document.getElementById("closeFullscreen");
-const pageRoot = document.getElementById("pageRoot");
+let locked=false, total=0, remain=0, last=0;
+const clickSound=new Audio("click.mp3");
+const finishSound=new Audio("finish.mp3");
 
-const clickSound = new Audio("click.mp3");
-const finishSound = new Audio("finish.mp3");
-
-let locked = false;
-let remainingSeconds = 0;
-let timerId = null;
-
-function resizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.8);
-  canvas.style.width = size + "px";
-  canvas.style.height = size + "px";
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawTimer();
+function resize(){
+  const v=window.visualViewport;
+  const size=Math.min(v.width,v.height*0.8);
+  canvas.width=canvas.height=size;
+  draw();
 }
+window.addEventListener("resize",resize);
 
-function drawTimer() {
-  const w = canvas.width / (window.devicePixelRatio || 1);
-  const h = canvas.height / (window.devicePixelRatio || 1);
-  const cx = w/2, cy = h/2;
-  const r = Math.min(w,h)*0.38;
+function draw(){
+  const r=canvas.width/2;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.translate(r,r);
+  ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--fg');
+  ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(0,0,r*0.9,0,Math.PI*2); ctx.stroke();
 
-  ctx.clearRect(0,0,w,h);
-  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--fg');
-  ctx.lineWidth = 4;
-
-  ctx.beginPath();
-  ctx.arc(cx,cy,r,0,Math.PI*2);
-  ctx.stroke();
-
-  if (remainingSeconds>0) {
-    const angle = remainingSeconds/60*6*Math.PI/180;
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--arc');
+  // arc
+  if(remain>0){
+    ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--arc');
     ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.arc(cx,cy,r-18,-Math.PI/2,-Math.PI/2+angle);
-    ctx.closePath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,r*0.75,-Math.PI/2, -Math.PI/2+remain*6*Math.PI/180);
     ctx.fill();
   }
 
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--fg');
-  ctx.font = "30px sans-serif";
-  ctx.textAlign="center"; ctx.textBaseline="middle";
+  // hand
+  let a=-Math.PI/2+remain*6*Math.PI/180;
+  ctx.strokeStyle="red"; ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.lineTo(Math.cos(a)*r*0.7,Math.sin(a)*r*0.7);
+  ctx.stroke();
+  ctx.fillStyle="red";
+  ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
 
-  for(let i=0;i<60;i++){
-    const a=-Math.PI/2+i*2*Math.PI/60;
-    const tick=i%5===0?24:12;
-    ctx.beginPath();
-    ctx.moveTo(cx+Math.cos(a)*(r-tick),cy+Math.sin(a)*(r-tick));
-    ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
-    ctx.stroke();
-    if(i%5===0){
-      ctx.fillText(i,cx+Math.cos(a)*(r+24),cy+Math.sin(a)*(r+24));
+  // numbers
+  ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--fg');
+  ctx.font=`${r*0.12}px sans-serif`;
+  for(let i=0;i<12;i++){
+    let ang=i*Math.PI/6-Math.PI/2;
+    let x=Math.cos(ang)*r*0.95;
+    let y=Math.sin(ang)*r*0.95;
+    ctx.fillText(i*5,x-ctx.measureText(i*5).width/2,y+6);
+  }
+  ctx.setTransform(1,0,0,1,0,0);
+}
+
+canvas.addEventListener("click",e=>{
+  if(locked) return;
+  const r=canvas.width/2;
+  const x=e.offsetX-r, y=e.offsetY-r;
+  let a=Math.atan2(y,x)+Math.PI/2;
+  if(a<0)a+=Math.PI*2;
+  total=Math.round(a*180/Math.PI/6);
+  remain=total;
+  clickSound.play();
+});
+
+function tick(t){
+  if(!last) last=t;
+  let d=(t-last)/1000; last=t;
+  if(remain>0){
+    remain-=d/60;
+    if(remain<=0){
+      remain=0;
+      finishSound.play();
+      navigator.vibrate?.([200,100,200]);
     }
   }
-
-  const a2=-Math.PI/2+remainingSeconds/60*6*Math.PI/180;
-  ctx.strokeStyle=remainingSeconds>0?"red":"gray";
-  ctx.lineWidth=6;
-  ctx.beginPath();
-  ctx.moveTo(cx,cy);
-  ctx.lineTo(cx+Math.cos(a2)*(r-36),cy+Math.sin(a2)*(r-36));
-  ctx.stroke();
+  draw();
+  requestAnimationFrame(tick);
 }
+requestAnimationFrame(tick);
 
-canvas.onclick = e => {
-  if(locked) return;
-  clickSound.play().catch(()=>{});
-  const rect=canvas.getBoundingClientRect();
-  const dx=e.clientX-rect.left-rect.width/2;
-  const dy=e.clientY-rect.top-rect.height/2;
-  let ang=Math.atan2(dy,dx)+Math.PI/2;
-  if(ang<0) ang+=2*Math.PI;
-  startTimer(Math.round(ang*60/(2*Math.PI))*60);
+document.getElementById("lockBtn").onclick=()=>{
+  locked=!locked;
+  const b=document.getElementById("lockBtn");
+  b.textContent=locked?"固定中":"固定";
+  b.classList.toggle("locked",locked);
+};
+document.getElementById("modeBtn").onclick=()=>{
+  document.body.classList.toggle("dark");
+};
+document.getElementById("fsBtn").onclick=()=>{
+  document.documentElement.requestFullscreen();
 };
 
-function startTimer(sec){
-  clearInterval(timerId);
-  remainingSeconds=sec;
-  drawTimer();
-  timerId=setInterval(()=>{
-    remainingSeconds--;
-    if(remainingSeconds<=0){
-      clearInterval(timerId);
-      remainingSeconds=0;
-      finishSound.play().catch(()=>{});
-      if(navigator.vibrate) navigator.vibrate(200);
-    }
-    drawTimer();
-  },1000);
+resize();
+
+// service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
 }
-
-lockBtn.onclick=()=>{ locked=!locked; lockBtn.textContent=locked?"固定中":"固定"; lockBtn.classList.toggle("locked",locked); };
-fullscreenBtn.onclick=()=>{ pageRoot.classList.add("fullscreen-mode"); resizeCanvas(); };
-closeFullscreen.onclick=()=>{ pageRoot.classList.remove("fullscreen-mode"); resizeCanvas(); };
-darkBtn.onclick=()=>{ document.body.classList.toggle("dark"); drawTimer(); };
-
-window.onresize=resizeCanvas;
-resizeCanvas();
 </script>
 </body>
 </html>
