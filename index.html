@@ -22,19 +22,19 @@ header {
 }
 header img { height:48px; }
 
-#desc { max-width:700px; margin:10px auto; text-align:left; }
+#desc { max-width:720px; margin:12px auto; text-align:left; line-height:1.6; }
+
+canvas { display:block; margin:8px auto; }
 
 #controls {
-  display:flex; justify-content:center; gap:10px; margin:10px 0;
+  display:flex; justify-content:center; gap:12px; margin:10px 0 16px;
 }
 button {
-  padding:8px 16px; font-size:16px; border-radius:20px;
+  padding:8px 18px; font-size:16px; border-radius:20px;
 }
 #lockBtn.locked { background:red; color:#fff; }
 
-canvas { display:block; margin:0 auto; }
-
-footer { max-width:700px; margin:20px auto; text-align:left; font-size:14px; }
+footer { max-width:720px; margin:20px auto; text-align:left; font-size:14px; }
 </style>
 </head>
 
@@ -53,13 +53,14 @@ footer { max-width:700px; margin:20px auto; text-align:left; font-size:14px; }
 「固定」ボタンで誤操作を防げます。
 </div>
 
+<canvas id="timer"></canvas>
+
+<!-- ★ ボタンは時計の「下」へ -->
 <div id="controls">
   <button id="fsBtn">フルスクリーン</button>
   <button id="lockBtn">固定</button>
   <button id="modeBtn">🌙 ダーク</button>
 </div>
-
-<canvas id="timer"></canvas>
 
 <footer>
 <h3>ご利用について</h3>
@@ -84,7 +85,8 @@ const finishSound=new Audio("finish.mp3");
 
 function resize(){
   const v=window.visualViewport;
-  const size=Math.min(v.width,v.height*0.75);
+  // 少し余白を持たせて数字が見切れないように
+  const size=Math.min(v.width, v.height*0.7);
   canvas.width=canvas.height=size;
   draw();
 }
@@ -98,15 +100,15 @@ function draw(){
   // 外枠
   ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--fg');
   ctx.lineWidth=4;
-  ctx.beginPath(); ctx.arc(0,0,r*0.85,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,r*0.80,0,Math.PI*2); ctx.stroke();
 
   // 目盛り
   for(let i=0;i<60;i++){
     let a=i*Math.PI/30-Math.PI/2;
     let len=i%5===0? r*0.12:r*0.06;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*(r*0.73),Math.sin(a)*(r*0.73));
-    ctx.lineTo(Math.cos(a)*(r*0.73+len),Math.sin(a)*(r*0.73+len));
+    ctx.moveTo(Math.cos(a)*(r*0.65),Math.sin(a)*(r*0.65));
+    ctx.lineTo(Math.cos(a)*(r*0.65+len),Math.sin(a)*(r*0.65+len));
     ctx.stroke();
   }
 
@@ -115,7 +117,7 @@ function draw(){
     ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--arc');
     ctx.beginPath();
     ctx.moveTo(0,0);
-    ctx.arc(0,0,r*0.68,-Math.PI/2,-Math.PI/2+remain*6*Math.PI/180);
+    ctx.arc(0,0,r*0.60,-Math.PI/2,-Math.PI/2+remain*6*Math.PI/180);
     ctx.fill();
   }
 
@@ -124,22 +126,23 @@ function draw(){
   ctx.strokeStyle="red"; ctx.lineWidth=4;
   ctx.beginPath();
   ctx.moveTo(0,0);
-  ctx.lineTo(Math.cos(a)*r*0.6,Math.sin(a)*r*0.6);
+  ctx.lineTo(Math.cos(a)*r*0.55,Math.sin(a)*r*0.55);
   ctx.stroke();
   ctx.fillStyle="red";
   ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
 
-  // 数字
+  // 数字（さらに外側＆少し大きく）
   ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--fg');
-  ctx.font=`${r*0.12}px sans-serif`;
+  ctx.font=`${r*0.13}px sans-serif`;
   for(let i=0;i<12;i++){
     let ang=i*Math.PI/6-Math.PI/2;
-    let x=Math.cos(ang)*r*0.95;
-    let y=Math.sin(ang)*r*0.95;
+    let x=Math.cos(ang)*r*1.05;
+    let y=Math.sin(ang)*r*1.05;
     let t=i*5;
     let w=ctx.measureText(t).width;
-    ctx.fillText(t,x-w/2,y+8);
+    ctx.fillText(t,x-w/2,y+10);
   }
+
   ctx.setTransform(1,0,0,1,0,0);
 }
 
