@@ -9,13 +9,11 @@
     --fg: #000;
     --arc: rgb(51,204,153);
   }
-
   body.dark {
     --bg: #111;
     --fg: #eee;
     --arc: rgb(247,148,40);
   }
-
   body {
     margin: 0;
     font-family: sans-serif;
@@ -23,15 +21,8 @@
     color: var(--fg);
     text-align: center;
   }
-
   .container { max-width: 900px; margin: 0 auto; }
-
-  #timerWrapper {
-    margin: 20px auto;
-    display: flex;
-    justify-content: center;
-  }
-
+  #timerWrapper { margin: 20px auto; display: flex; justify-content: center; }
   canvas { touch-action: none; display: block; }
 
   button {
@@ -44,9 +35,7 @@
     color: var(--fg);
     cursor: pointer;
   }
-
   #fullscreenBtn { border-radius: 20px; }
-
   #lockBtn.locked { background: red; color: #fff; }
 
   #closeFullscreen {
@@ -64,14 +53,32 @@
   .fullscreen-mode h1,
   .fullscreen-mode #desc,
   .fullscreen-mode #buttons,
-  .fullscreen-mode #credit { display: none; }
-
+  .fullscreen-mode #credit {
+    display: none;
+  }
   .fullscreen-mode #closeFullscreen { display: block; }
+
+  #desc, #credit {
+    text-align: left;
+    margin: 20px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
 </style>
 </head>
 <body>
 <div class="container" id="pageRoot">
   <h1>残り時間がみえる学習タイマー</h1>
+
+  <div id="desc">
+    <p><b>使い方</b></p>
+    <p>
+      学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていくのが見えます。<br>
+      一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
+      『固定』ボタンを押すと、時間の変更ができなくなります。
+      フルスクリーンやダークモードにも対応しています。
+    </p>
+  </div>
 
   <div id="timerWrapper">
     <canvas id="timerCanvas"></canvas>
@@ -84,6 +91,21 @@
   </div>
 
   <button id="closeFullscreen">×</button>
+
+  <div id="credit">
+    <h3>ご利用について</h3>
+    <p>
+      本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
+      本ツールは商用利用を含めてご自由に利用できます。<br>
+      本ツールを利用したことによるいかなる損害についても開発者は一切の責任を負いません。
+    </p>
+
+    <h3>権利表記</h3>
+    <p>
+      音源はオトロジック(CC BY 4.0)からお借りしました。  
+      <a href="https://otologic.jp/" target="_blank">https://otologic.jp/</a>
+    </p>
+  </div>
 </div>
 
 <script>
