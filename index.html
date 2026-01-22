@@ -136,8 +136,8 @@ function draw(){
 ctx.font = `${r * 0.12}px sans-serif`;
 for (let i = 0; i < 12; i++) {
   let ang = i * Math.PI / 6 - Math.PI / 2;
-  let x = Math.cos(ang) * r * 0.94;
-  let y = Math.sin(ang) * r * 0.94;
+  let x = Math.cos(ang) * r * 0.90;
+  let y = Math.sin(ang) * r * 0.90;
   let t = i * 5;
   let w = ctx.measureText(t).width;
   ctx.fillText(t, x - w / 2, y + 8);
