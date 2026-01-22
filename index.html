@@ -50,11 +50,6 @@
     text-align: left;
   }
 
-  /* フルスクリーン用 */
-  .fullscreen-mode {
-    background: #ffffff;
-  }
-
   .fullscreen-mode h1,
   .fullscreen-mode #desc,
   .fullscreen-mode #buttons,
@@ -82,14 +77,6 @@
 <body>
 <div class="container" id="pageRoot">
   <h1>残り時間がみえる学習タイマー</h1>
-  <div id="desc">
-    <p><b>使い方</b></p>
-    <p>
-      学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていくのが見えます。<br>
-      一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
-      『固定』ボタンを押すと、時間の変更ができなくなります。
-    </p>
-  </div>
 
   <div id="timerWrapper">
     <canvas id="timerCanvas"></canvas>
@@ -145,18 +132,25 @@ let locked = false;
 let remainingSeconds = 0;
 let timerId = null;
 
-// ★ 画面サイズに合わせてキャンバスをリサイズ
+// 🔧 高DPI対応リサイズ
 function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
   const size = Math.min(timerWrapper.clientWidth, window.innerHeight * 0.8);
-  canvas.width = size;
-  canvas.height = size;
+
+  canvas.style.width = size + "px";
+  canvas.style.height = size + "px";
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawTimer();
 }
 
 function drawTimer() {
-  const w = canvas.width, h = canvas.height;
+  const w = canvas.width / (window.devicePixelRatio || 1);
+  const h = canvas.height / (window.devicePixelRatio || 1);
   const cx = w / 2, cy = h / 2;
-  const r = Math.min(w, h) * 0.40;   // 少し内側寄り
+  const r = Math.min(w, h) * 0.38;
 
   ctx.clearRect(0, 0, w, h);
 
@@ -167,29 +161,27 @@ function drawTimer() {
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
 
-  // 残り時間の円弧（さらに少し内側）
+  // 残り時間の円弧
   if (remainingSeconds > 0) {
     const angle = (remainingSeconds / 60) * 6 * Math.PI / 180;
     ctx.fillStyle = "rgb(51,204,153)";
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r - 16, -Math.PI / 2, -Math.PI / 2 + angle, false);
+    ctx.arc(cx, cy, r - 18, -Math.PI / 2, -Math.PI / 2 + angle, false);
     ctx.closePath();
     ctx.fill();
   }
 
-  // 目盛りと数字
+  // 目盛り・数字
   ctx.fillStyle = "#000";
-  ctx.font = "28px sans-serif";
+  ctx.font = "30px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   for (let i = 0; i < 60; i++) {
     const a = -Math.PI / 2 + i * 2 * Math.PI / 60;
 
-    // メモリ長さ：2倍
-    const tickLen = i % 5 === 0 ? 28 : 16;
-
+    const tickLen = i % 5 === 0 ? 24 : 12;
     const x1 = cx + Math.cos(a) * (r - tickLen);
     const y1 = cy + Math.sin(a) * (r - tickLen);
     const x2 = cx + Math.cos(a) * r;
@@ -201,9 +193,9 @@ function drawTimer() {
     ctx.stroke();
 
     if (i % 5 === 0) {
-      // ★ 数字は“内側”に寄せて見切れ防止
-      const tx = cx + Math.cos(a) * (r + 30);
-      const ty = cy + Math.sin(a) * (r + 30);
+      // ★ 数字は確実に内側へ（15・45対策）
+      const tx = cx + Math.cos(a) * (r + 24);
+      const ty = cy + Math.sin(a) * (r + 24);
       ctx.fillText(i.toString(), tx, ty);
     }
   }
@@ -231,8 +223,8 @@ canvas.addEventListener("click", e => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  const dx = x - canvas.width / 2;
-  const dy = y - canvas.height / 2;
+  const dx = x - rect.width / 2;
+  const dy = y - rect.height / 2;
   let ang = Math.atan2(dy, dx) + Math.PI / 2;
   if (ang < 0) ang += 2 * Math.PI;
   const min = Math.round(ang * 60 / (2 * Math.PI));
@@ -267,12 +259,12 @@ lockBtn.onclick = () => {
 
 fullscreenBtn.onclick = () => {
   pageRoot.classList.add("fullscreen-mode");
-  resizeCanvas(); // フルスクリーン時に再計算
+  resizeCanvas();
 };
 
 closeFullscreen.onclick = () => {
   pageRoot.classList.remove("fullscreen-mode");
-  resizeCanvas(); // 戻ったときも再計算
+  resizeCanvas();
 };
 
 window.addEventListener("resize", resizeCanvas);
