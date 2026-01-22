@@ -5,16 +5,23 @@
 <title>残り時間がみえる学習タイマー</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{font-family:system-ui,sans-serif;text-align:center;margin:0;padding:24px}
-h1{font-size:1.9rem}
-.desc{max-width:700px;margin:0 auto 16px;line-height:1.6}
+body{font-family:system-ui,sans-serif;margin:0;padding:24px}
+.container{text-align:center;max-width:720px;margin:0 auto}
+h1{font-size:2rem;margin-bottom:0.5em}
+.desc{margin-bottom:20px;line-height:1.7}
+#timerWrap{display:flex;flex-direction:column;align-items:center}
 button{
-  padding:10px 20px;font-size:1rem;border:2px solid black;
-  background:white;cursor:pointer;border-radius:6px;margin-bottom:16px
+  margin-top:14px;
+  padding:10px 24px;
+  font-size:1rem;
+  border:2px solid black;
+  background:white;
+  cursor:pointer;
+  border-radius:6px;
 }
 button.locked{color:red;border-color:red}
-svg{width:360px;max-width:95vw;height:auto;touch-action:manipulation}
-.number{font-size:18px;fill:black}
+svg{width:520px;max-width:100%;height:auto;touch-action:manipulation}
+.number{font-size:20px;fill:black}
 .tick{stroke:black;stroke-width:2}
 .tick.small{stroke-width:1}
 .hand{stroke:red;stroke-width:4;stroke-linecap:round}
@@ -25,24 +32,31 @@ svg{width:360px;max-width:95vw;height:auto;touch-action:manipulation}
 </head>
 <body>
 
-<h1>残り時間がみえる学習タイマー</h1>
-<div class="desc">
-<strong>使い方</strong><br>
-学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていくのが見えます。<br>
-一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
-『固定』ボタンを押すと、時間の変更ができなくなりますが、もう一度押すことで変更できます。
+<div class="container">
+  <h1>残り時間がみえる学習タイマー</h1>
+  <div class="desc">
+    <strong>使い方</strong><br>
+    学習したい時間をおすと、タイマーがセットされます。少しずつ時間がへっていくのが見えます。<br>
+    一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
+    『固定』ボタンを押すと、時間の変更ができなくなりますが、もう一度押すことで変更できます。
+  </div>
+
+  <div id="timerWrap">
+    <svg id="timer" viewBox="0 0 360 360">
+      <circle cx="180" cy="180" r="140" fill="none" stroke="black" stroke-width="4"/>
+      <path id="arc" class="arc"/>
+      <g id="ticks"></g>
+      <g id="numbers"></g>
+      <line id="hand" class="hand idle" x1="180" y1="180" x2="180" y2="50"/>
+      <circle cx="180" cy="180" r="14" class="center-circle"/>
+    </svg>
+
+    <button id="lockBtn">固定</button>
+  </div>
 </div>
 
-<button id="lockBtn">固定</button>
-
-<svg id="timer" viewBox="0 0 360 360">
-<circle cx="180" cy="180" r="140" fill="none" stroke="black" stroke-width="4"/>
-<path id="arc" class="arc"/>
-<g id="ticks"></g>
-<g id="numbers"></g>
-<line id="hand" class="hand idle" x1="180" y1="180" x2="180" y2="50"/>
-<circle cx="180" cy="180" r="14" class="center-circle"/>
-</svg>
+<audio id="clickSound" src="click.mp3" preload="auto"></audio>
+<audio id="finishSound" src="finish.mp3" preload="auto"></audio>
 
 <script>
 const svg=document.getElementById("timer");
@@ -51,6 +65,8 @@ const arc=document.getElementById("arc");
 const ticks=document.getElementById("ticks");
 const numbers=document.getElementById("numbers");
 const lockBtn=document.getElementById("lockBtn");
+const clickSound=document.getElementById("clickSound");
+const finishSound=document.getElementById("finishSound");
 
 let totalSeconds=0,remainingSeconds=0,timerId=null;
 let locked=false;
@@ -93,11 +109,18 @@ function update(sec){
 }
 function start(min){
  if(timerId)clearInterval(timerId);
+ clickSound.currentTime=0; clickSound.play();
  totalSeconds=min*60;remainingSeconds=totalSeconds;
  hand.classList.remove("idle");update(remainingSeconds);
  timerId=setInterval(()=>{
   remainingSeconds--;
-  if(remainingSeconds<=0){clearInterval(timerId);hand.classList.add("idle");update(0);return;}
+  if(remainingSeconds<=0){
+    clearInterval(timerId);
+    hand.classList.add("idle");
+    update(0);
+    finishSound.currentTime=0; finishSound.play();
+    return;
+  }
   update(remainingSeconds);
  },1000);
 }
