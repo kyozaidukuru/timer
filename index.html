@@ -4,58 +4,50 @@
 <meta charset="UTF-8" />
 <title>残り時間がみえる学習タイマー</title>
 <style>
+  :root {
+    --bg: #fff;
+    --fg: #000;
+    --arc: rgb(51,204,153);
+  }
+
+  body.dark {
+    --bg: #111;
+    --fg: #eee;
+    --arc: rgb(247,148,40);
+  }
+
   body {
-    font-family: sans-serif;
     margin: 0;
-    background: #ffffff;
+    font-family: sans-serif;
+    background: var(--bg);
+    color: var(--fg);
     text-align: center;
   }
 
-  h1 { margin-top: 20px; }
   .container { max-width: 900px; margin: 0 auto; }
 
   #timerWrapper {
     margin: 20px auto;
-    width: 100%;
     display: flex;
     justify-content: center;
   }
 
-  canvas {
-    background: #fff;
-    touch-action: none;
-    display: block;
-  }
+  canvas { touch-action: none; display: block; }
 
   button {
     margin: 10px;
     padding: 10px 18px;
     font-size: 16px;
     border-radius: 8px;
-    border: 1px solid #000;
-    background: #fff;
+    border: 1px solid var(--fg);
+    background: var(--bg);
+    color: var(--fg);
     cursor: pointer;
   }
 
   #fullscreenBtn { border-radius: 20px; }
 
-  #lockBtn.locked {
-    background: red;
-    color: #fff;
-  }
-
-  #credit {
-    font-size: 14px;
-    margin-top: 20px;
-    text-align: left;
-  }
-
-  .fullscreen-mode h1,
-  .fullscreen-mode #desc,
-  .fullscreen-mode #buttons,
-  .fullscreen-mode #credit {
-    display: none;
-  }
+  #lockBtn.locked { background: red; color: #fff; }
 
   #closeFullscreen {
     display: none;
@@ -65,13 +57,16 @@
     font-size: 32px;
     background: none;
     border: none;
-    cursor: pointer;
+    color: var(--fg);
     z-index: 1000;
   }
 
-  .fullscreen-mode #closeFullscreen {
-    display: block;
-  }
+  .fullscreen-mode h1,
+  .fullscreen-mode #desc,
+  .fullscreen-mode #buttons,
+  .fullscreen-mode #credit { display: none; }
+
+  .fullscreen-mode #closeFullscreen { display: block; }
 </style>
 </head>
 <body>
@@ -83,26 +78,12 @@
   </div>
 
   <div id="buttons">
-    <button id="fullscreenBtn">フルスクリーン表示</button>
+    <button id="darkBtn">🌙 ダーク</button>
+    <button id="fullscreenBtn">フルスクリーン</button>
     <button id="lockBtn">固定</button>
   </div>
 
   <button id="closeFullscreen">×</button>
-
-  <div id="credit">
-    <h3>ご利用について</h3>
-    <p>
-      本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
-      本ツールは商用利用を含めてご自由に利用できます。<br>
-      本ツールを利用したことによるいかなる損害についても開発者は一切の責任を負いません。
-    </p>
-
-    <h3>権利表記</h3>
-    <p>
-      音源はオトロジック(CC BY 4.0)からお借りしました。  
-      <a href="https://otologic.jp/" target="_blank">https://otologic.jp/</a>
-    </p>
-  </div>
 </div>
 
 <script>
@@ -110,38 +91,24 @@ const canvas = document.getElementById("timerCanvas");
 const ctx = canvas.getContext("2d");
 const lockBtn = document.getElementById("lockBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
+const darkBtn = document.getElementById("darkBtn");
 const closeFullscreen = document.getElementById("closeFullscreen");
 const pageRoot = document.getElementById("pageRoot");
-const timerWrapper = document.getElementById("timerWrapper");
 
-// 🔊 音声
 const clickSound = new Audio("click.mp3");
 const finishSound = new Audio("finish.mp3");
-let audioUnlocked = false;
-
-function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-  clickSound.play().then(() => {
-    clickSound.pause();
-    clickSound.currentTime = 0;
-  }).catch(()=>{});
-}
 
 let locked = false;
 let remainingSeconds = 0;
 let timerId = null;
 
-// 🔧 高DPI対応リサイズ
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
-  const size = Math.min(timerWrapper.clientWidth, window.innerHeight * 0.8);
-
+  const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.8);
   canvas.style.width = size + "px";
   canvas.style.height = size + "px";
   canvas.width = size * dpr;
   canvas.height = size * dpr;
-
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawTimer();
 }
@@ -149,127 +116,85 @@ function resizeCanvas() {
 function drawTimer() {
   const w = canvas.width / (window.devicePixelRatio || 1);
   const h = canvas.height / (window.devicePixelRatio || 1);
-  const cx = w / 2, cy = h / 2;
-  const r = Math.min(w, h) * 0.38;
+  const cx = w/2, cy = h/2;
+  const r = Math.min(w,h)*0.38;
 
-  ctx.clearRect(0, 0, w, h);
-
-  // 外枠
-  ctx.strokeStyle = "#000";
+  ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--fg');
   ctx.lineWidth = 4;
+
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.arc(cx,cy,r,0,Math.PI*2);
   ctx.stroke();
 
-  // 残り時間の円弧
-  if (remainingSeconds > 0) {
-    const angle = (remainingSeconds / 60) * 6 * Math.PI / 180;
-    ctx.fillStyle = "rgb(51,204,153)";
+  if (remainingSeconds>0) {
+    const angle = remainingSeconds/60*6*Math.PI/180;
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--arc');
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r - 18, -Math.PI / 2, -Math.PI / 2 + angle, false);
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r-18,-Math.PI/2,-Math.PI/2+angle);
     ctx.closePath();
     ctx.fill();
   }
 
-  // 目盛り・数字
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--fg');
   ctx.font = "30px sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textAlign="center"; ctx.textBaseline="middle";
 
-  for (let i = 0; i < 60; i++) {
-    const a = -Math.PI / 2 + i * 2 * Math.PI / 60;
-
-    const tickLen = i % 5 === 0 ? 24 : 12;
-    const x1 = cx + Math.cos(a) * (r - tickLen);
-    const y1 = cy + Math.sin(a) * (r - tickLen);
-    const x2 = cx + Math.cos(a) * r;
-    const y2 = cy + Math.sin(a) * r;
-
+  for(let i=0;i<60;i++){
+    const a=-Math.PI/2+i*2*Math.PI/60;
+    const tick=i%5===0?24:12;
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(cx+Math.cos(a)*(r-tick),cy+Math.sin(a)*(r-tick));
+    ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
     ctx.stroke();
-
-    if (i % 5 === 0) {
-      // ★ 数字は確実に内側へ（15・45対策）
-      const tx = cx + Math.cos(a) * (r + 24);
-      const ty = cy + Math.sin(a) * (r + 24);
-      ctx.fillText(i.toString(), tx, ty);
+    if(i%5===0){
+      ctx.fillText(i,cx+Math.cos(a)*(r+24),cy+Math.sin(a)*(r+24));
     }
   }
 
-  // 針
-  const a2 = -Math.PI / 2 + (remainingSeconds / 60) * 6 * Math.PI / 180;
-  ctx.strokeStyle = remainingSeconds > 0 ? "red" : "gray";
-  ctx.lineWidth = 6;
+  const a2=-Math.PI/2+remainingSeconds/60*6*Math.PI/180;
+  ctx.strokeStyle=remainingSeconds>0?"red":"gray";
+  ctx.lineWidth=6;
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + Math.cos(a2) * (r - 36), cy + Math.sin(a2) * (r - 36));
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(a2)*(r-36),cy+Math.sin(a2)*(r-36));
   ctx.stroke();
-
-  // 中心円
-  ctx.fillStyle = "#000";
-  ctx.beginPath();
-  ctx.arc(cx, cy, 14, 0, Math.PI * 2);
-  ctx.fill();
 }
 
-canvas.addEventListener("click", e => {
-  unlockAudio();
-  if (locked) return;
-
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const dx = x - rect.width / 2;
-  const dy = y - rect.height / 2;
-  let ang = Math.atan2(dy, dx) + Math.PI / 2;
-  if (ang < 0) ang += 2 * Math.PI;
-  const min = Math.round(ang * 60 / (2 * Math.PI));
-  startTimer(min * 60);
-});
-
-function startTimer(sec) {
-  clearInterval(timerId);
-  remainingSeconds = sec;
-
-  clickSound.currentTime = 0;
+canvas.onclick = e => {
+  if(locked) return;
   clickSound.play().catch(()=>{});
+  const rect=canvas.getBoundingClientRect();
+  const dx=e.clientX-rect.left-rect.width/2;
+  const dy=e.clientY-rect.top-rect.height/2;
+  let ang=Math.atan2(dy,dx)+Math.PI/2;
+  if(ang<0) ang+=2*Math.PI;
+  startTimer(Math.round(ang*60/(2*Math.PI))*60);
+};
 
+function startTimer(sec){
+  clearInterval(timerId);
+  remainingSeconds=sec;
   drawTimer();
-  timerId = setInterval(() => {
+  timerId=setInterval(()=>{
     remainingSeconds--;
-    if (remainingSeconds <= 0) {
+    if(remainingSeconds<=0){
       clearInterval(timerId);
-      remainingSeconds = 0;
-      finishSound.currentTime = 0;
+      remainingSeconds=0;
       finishSound.play().catch(()=>{});
+      if(navigator.vibrate) navigator.vibrate(200);
     }
     drawTimer();
-  }, 1000);
+  },1000);
 }
 
-lockBtn.onclick = () => {
-  locked = !locked;
-  lockBtn.textContent = locked ? "固定中" : "固定";
-  lockBtn.classList.toggle("locked", locked);
-};
+lockBtn.onclick=()=>{ locked=!locked; lockBtn.textContent=locked?"固定中":"固定"; lockBtn.classList.toggle("locked",locked); };
+fullscreenBtn.onclick=()=>{ pageRoot.classList.add("fullscreen-mode"); resizeCanvas(); };
+closeFullscreen.onclick=()=>{ pageRoot.classList.remove("fullscreen-mode"); resizeCanvas(); };
+darkBtn.onclick=()=>{ document.body.classList.toggle("dark"); drawTimer(); };
 
-fullscreenBtn.onclick = () => {
-  pageRoot.classList.add("fullscreen-mode");
-  resizeCanvas();
-};
-
-closeFullscreen.onclick = () => {
-  pageRoot.classList.remove("fullscreen-mode");
-  resizeCanvas();
-};
-
-window.addEventListener("resize", resizeCanvas);
-
-// 初期化
+window.onresize=resizeCanvas;
 resizeCanvas();
 </script>
 </body>
