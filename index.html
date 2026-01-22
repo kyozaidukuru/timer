@@ -2,60 +2,39 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>残り時間がみえる学習タイマー</title>
 
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="iconsmall.png" type="image/png">
+<link rel="icon" href="iconsmall.png">
 
 <style>
 :root {
-  --bg: #ffffff;
-  --fg: #111;
-  --arc: rgb(51,204,153);
+  --bg:#fff; --fg:#111; --arc:rgb(51,204,153);
 }
 body.dark {
-  --bg: #111;
-  --fg: #f5f5f5;
-  --arc: rgb(247,148,40);
+  --bg:#111; --fg:#f5f5f5; --arc:rgb(247,148,40);
 }
-body {
-  margin:0;
-  background:var(--bg);
-  color:var(--fg);
-  font-family:sans-serif;
-  text-align:center;
-}
+body { margin:0; background:var(--bg); color:var(--fg); font-family:sans-serif; text-align:center; }
+
 header {
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  margin-top:16px;
+  display:flex; align-items:center; justify-content:center; gap:12px; margin-top:16px;
 }
 header img { height:48px; }
+
+#desc { max-width:700px; margin:10px auto; text-align:left; }
+
 #controls {
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  margin:10px 0;
+  display:flex; justify-content:center; gap:10px; margin:10px 0;
 }
 button {
-  font-size:16px;
-  padding:8px 16px;
-  border-radius:20px;
+  padding:8px 16px; font-size:16px; border-radius:20px;
 }
-#lockBtn.locked {
-  background:red;
-  color:white;
-}
+#lockBtn.locked { background:red; color:#fff; }
+
 canvas { display:block; margin:0 auto; }
-footer {
-  max-width:700px;
-  margin:20px auto;
-  text-align:left;
-  font-size:14px;
-}
+
+footer { max-width:700px; margin:20px auto; text-align:left; font-size:14px; }
 </style>
 </head>
 
@@ -65,6 +44,14 @@ footer {
   <h1>残り時間がみえる学習タイマー</h1>
   <img src="iconsmall.png">
 </header>
+
+<div id="desc">
+<b>使い方</b><br>
+学習したい時間をおすと、タイマーがセットされます。<br>
+少しずつ時間がへっていくのが見えます。<br>
+一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
+「固定」ボタンで誤操作を防げます。
+</div>
 
 <div id="controls">
   <button id="fsBtn">フルスクリーン</button>
@@ -78,8 +65,7 @@ footer {
 <h3>ご利用について</h3>
 <p>
 本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
-本ツールは商用利用を含めてご自由に利用できます。<br>
-本ツールを利用したことによるいかなる損害についても開発者は一切の責任を負いません。
+商用利用も自由です。利用による損害について責任を負いません。
 </p>
 
 <h3>権利表記</h3>
@@ -90,15 +76,15 @@ footer {
 </footer>
 
 <script>
-const canvas = document.getElementById("timer");
-const ctx = canvas.getContext("2d");
-let locked=false, total=0, remain=0, last=0;
+const canvas=document.getElementById("timer");
+const ctx=canvas.getContext("2d");
+let locked=false,remain=0,last=0;
 const clickSound=new Audio("click.mp3");
 const finishSound=new Audio("finish.mp3");
 
 function resize(){
   const v=window.visualViewport;
-  const size=Math.min(v.width,v.height*0.8);
+  const size=Math.min(v.width,v.height*0.75);
   canvas.width=canvas.height=size;
   draw();
 }
@@ -108,54 +94,67 @@ function draw(){
   const r=canvas.width/2;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.translate(r,r);
+
+  // 外枠
   ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--fg');
   ctx.lineWidth=4;
-  ctx.beginPath(); ctx.arc(0,0,r*0.9,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,r*0.85,0,Math.PI*2); ctx.stroke();
 
-  // arc
+  // 目盛り
+  for(let i=0;i<60;i++){
+    let a=i*Math.PI/30-Math.PI/2;
+    let len=i%5===0? r*0.12:r*0.06;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*(r*0.73),Math.sin(a)*(r*0.73));
+    ctx.lineTo(Math.cos(a)*(r*0.73+len),Math.sin(a)*(r*0.73+len));
+    ctx.stroke();
+  }
+
+  // 円弧
   if(remain>0){
     ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--arc');
     ctx.beginPath();
     ctx.moveTo(0,0);
-    ctx.arc(0,0,r*0.75,-Math.PI/2, -Math.PI/2+remain*6*Math.PI/180);
+    ctx.arc(0,0,r*0.68,-Math.PI/2,-Math.PI/2+remain*6*Math.PI/180);
     ctx.fill();
   }
 
-  // hand
+  // 針
   let a=-Math.PI/2+remain*6*Math.PI/180;
   ctx.strokeStyle="red"; ctx.lineWidth=4;
   ctx.beginPath();
   ctx.moveTo(0,0);
-  ctx.lineTo(Math.cos(a)*r*0.7,Math.sin(a)*r*0.7);
+  ctx.lineTo(Math.cos(a)*r*0.6,Math.sin(a)*r*0.6);
   ctx.stroke();
   ctx.fillStyle="red";
-  ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
 
-  // numbers
+  // 数字
   ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--fg');
   ctx.font=`${r*0.12}px sans-serif`;
   for(let i=0;i<12;i++){
     let ang=i*Math.PI/6-Math.PI/2;
     let x=Math.cos(ang)*r*0.95;
     let y=Math.sin(ang)*r*0.95;
-    ctx.fillText(i*5,x-ctx.measureText(i*5).width/2,y+6);
+    let t=i*5;
+    let w=ctx.measureText(t).width;
+    ctx.fillText(t,x-w/2,y+8);
   }
   ctx.setTransform(1,0,0,1,0,0);
 }
 
-canvas.addEventListener("click",e=>{
-  if(locked) return;
+canvas.onclick=e=>{
+  if(locked)return;
   const r=canvas.width/2;
-  const x=e.offsetX-r, y=e.offsetY-r;
+  let x=e.offsetX-r,y=e.offsetY-r;
   let a=Math.atan2(y,x)+Math.PI/2;
   if(a<0)a+=Math.PI*2;
-  total=Math.round(a*180/Math.PI/6);
-  remain=total;
+  remain=Math.round(a*180/Math.PI/6);
   clickSound.play();
-});
+};
 
 function tick(t){
-  if(!last) last=t;
+  if(!last)last=t;
   let d=(t-last)/1000; last=t;
   if(remain>0){
     remain-=d/60;
@@ -176,19 +175,10 @@ document.getElementById("lockBtn").onclick=()=>{
   b.textContent=locked?"固定中":"固定";
   b.classList.toggle("locked",locked);
 };
-document.getElementById("modeBtn").onclick=()=>{
-  document.body.classList.toggle("dark");
-};
-document.getElementById("fsBtn").onclick=()=>{
-  document.documentElement.requestFullscreen();
-};
+document.getElementById("modeBtn").onclick=()=>document.body.classList.toggle("dark");
+document.getElementById("fsBtn").onclick=()=>document.documentElement.requestFullscreen();
 
 resize();
-
-// service worker
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js');
-}
 </script>
 </body>
 </html>
