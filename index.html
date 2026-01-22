@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>サークルタイマー</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
       font-family: system-ui, sans-serif;
@@ -17,7 +17,7 @@
       margin-bottom: 0.5em;
     }
     .desc {
-      max-width: 600px;
+      max-width: 640px;
       margin: 0 auto 24px;
       font-size: 1rem;
       line-height: 1.6;
@@ -69,11 +69,17 @@
   </div>
 
   <svg id="timer" viewBox="0 0 300 300">
+    <!-- 外枠 -->
     <circle cx="150" cy="150" r="130" fill="none" stroke="black" stroke-width="4"/>
+    <!-- 扇形 -->
     <path id="arc" class="arc" d="" />
+    <!-- 目盛り -->
     <g id="ticks"></g>
+    <!-- 数字 -->
     <g id="numbers"></g>
+    <!-- 分針 -->
     <line id="hand" class="hand idle" x1="150" y1="150" x2="150" y2="40"/>
+    <!-- 中心円 -->
     <circle cx="150" cy="150" r="12" class="center-circle"/>
   </svg>
 
@@ -89,9 +95,15 @@ let remainingSeconds = 0;
 let timerId = null;
 
 const center = { x: 150, y: 150 };
-const radius = 110;
+const R_TICK_OUT = 130;
+const R_TICK_IN_MAJOR = 115;
+const R_TICK_IN_MINOR = 120;
+const R_NUM = 150;   // 数字は円の外側
+const R_ARC = 110;   // 扇形の半径
+const R_HAND = 105;  // 分針の長さ（目盛りより少し内側）
 
 function polarToCartesian(cx, cy, r, angle) {
+  // 0度は上、右回りを正とする
   const rad = (angle - 90) * Math.PI / 180.0;
   return {
     x: cx + r * Math.cos(rad),
@@ -100,9 +112,10 @@ function polarToCartesian(cx, cy, r, angle) {
 }
 
 function describeArc(cx, cy, r, startAngle, endAngle) {
+  // 扇形：中心→終点→円弧→始点→Z
   const start = polarToCartesian(cx, cy, r, endAngle);
   const end = polarToCartesian(cx, cy, r, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+  const largeArcFlag = (endAngle - startAngle) % 360 <= 180 ? "0" : "1";
   return [
     "M", cx, cy,
     "L", start.x, start.y,
@@ -115,8 +128,10 @@ function drawFace() {
   for (let i = 0; i < 60; i++) {
     const angle = i * 6;
     const isMajor = i % 5 === 0;
-    const r1 = 130;
-    const r2 = isMajor ? 115 : 120;
+
+    // 目盛り
+    const r1 = R_TICK_OUT;
+    const r2 = isMajor ? R_TICK_IN_MAJOR : R_TICK_IN_MINOR;
     const p1 = polarToCartesian(150,150,r1,angle);
     const p2 = polarToCartesian(150,150,r2,angle);
     const line = document.createElementNS("http://www.w3.org/2000/svg","line");
@@ -125,9 +140,10 @@ function drawFace() {
     line.setAttribute("class","tick"+(isMajor?"":" small"));
     ticksGroup.appendChild(line);
 
+    // 数字（円の外側に配置）
     if (isMajor) {
       const num = document.createElementNS("http://www.w3.org/2000/svg","text");
-      const np = polarToCartesian(150,150,95,angle);
+      const np = polarToCartesian(150,150,R_NUM,angle);
       num.setAttribute("x",np.x);
       num.setAttribute("y",np.y+5);
       num.setAttribute("text-anchor","middle");
@@ -138,34 +154,50 @@ function drawFace() {
   }
 }
 
-function setHandBySeconds(sec) {
-  const ratio = sec / totalSeconds;
-  const angle = 360 * ratio;
-  hand.setAttribute("transform", `rotate(${-angle} 150 150)`);
-  arc.setAttribute("d", describeArc(150,150,110,0,angle));
+// 残り秒数から、扇形角度と分針位置を更新
+function updateBySeconds(sec) {
+  if (totalSeconds <= 0) return;
+
+  // 改善点1：速度一定（1分=6度 → 1秒=0.1度）
+  const angle = sec * 0.1; // 度
+
+  // 扇形：0度（上）から angle 度まで
+  if (angle > 0) {
+    arc.setAttribute("d", describeArc(150,150,R_ARC,0,angle));
+  } else {
+    arc.setAttribute("d","");
+  }
+
+  // 改善点3：分針は円弧の端に追従
+  const end = polarToCartesian(150,150,R_HAND,angle);
+  hand.setAttribute("x2", end.x);
+  hand.setAttribute("y2", end.y);
 }
 
 function startTimer(minutes) {
   if (timerId) clearInterval(timerId);
+
   totalSeconds = minutes * 60;
   remainingSeconds = totalSeconds;
-  hand.classList.remove("idle");
 
-  setHandBySeconds(remainingSeconds);
+  // 初期描画
+  hand.classList.remove("idle");
+  updateBySeconds(remainingSeconds);
 
   timerId = setInterval(()=>{
     remainingSeconds--;
     if (remainingSeconds <= 0) {
       clearInterval(timerId);
-      hand.classList.add("idle");
-      arc.setAttribute("d","");
       remainingSeconds = 0;
+      updateBySeconds(0);
+      hand.classList.add("idle");
       return;
     }
-    setHandBySeconds(remainingSeconds);
-  },1000);
+    updateBySeconds(remainingSeconds);
+  }, 1000);
 }
 
+// 盤面クリック／タッチで分数設定
 svg.addEventListener("pointerdown",(e)=>{
   const rect = svg.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -174,7 +206,7 @@ svg.addEventListener("pointerdown",(e)=>{
   const dy = y - rect.height/2;
   let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
   if (angle < 0) angle += 360;
-  const minute = Math.round(angle / 6);
+  const minute = Math.round(angle / 6); // 0..60
   if (minute > 0) startTimer(minute);
 });
 
