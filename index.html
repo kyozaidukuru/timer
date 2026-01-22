@@ -132,15 +132,15 @@ function draw(){
   ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
 
   // 数字（さらに外側＆少し大きく）
-  ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--fg');
-  ctx.font=`${r*0.13}px sans-serif`;
-  for(let i=0;i<12;i++){
-    let ang=i*Math.PI/6-Math.PI/2;
-    let x=Math.cos(ang)*r*1.05;
-    let y=Math.sin(ang)*r*1.05;
-    let t=i*5;
-    let w=ctx.measureText(t).width;
-    ctx.fillText(t,x-w/2,y+10);
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--fg');
+ctx.font = `${r * 0.12}px sans-serif`;
+for (let i = 0; i < 12; i++) {
+  let ang = i * Math.PI / 6 - Math.PI / 2;
+  let x = Math.cos(ang) * r * 0.94;
+  let y = Math.sin(ang) * r * 0.94;
+  let t = i * 5;
+  let w = ctx.measureText(t).width;
+  ctx.fillText(t, x - w / 2, y + 8);
   }
 
   ctx.setTransform(1,0,0,1,0,0);
