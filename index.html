@@ -22,19 +22,19 @@ header {
 }
 header img { height:48px; }
 
-#desc { max-width:720px; margin:12px auto; text-align:left; line-height:1.6; }
+#desc { max-width:720px; margin:12px auto; text-align:left; line-height:1.6; padding: 0 10px; }
 
-canvas { display:block; margin:8px auto; }
+canvas { display:block; margin:8px auto; cursor: pointer; }
 
 #controls {
   display:flex; justify-content:center; gap:12px; margin:10px 0 16px;
 }
 button {
-  padding:8px 18px; font-size:16px; border-radius:20px;
+  padding:8px 18px; font-size:16px; border-radius:20px; cursor: pointer;
 }
 #lockBtn.locked { background:red; color:#fff; }
 
-footer { max-width:720px; margin:20px auto; text-align:left; font-size:14px; }
+footer { max-width:720px; margin:20px auto; text-align:left; font-size:14px; padding: 0 10px; }
 </style>
 </head>
 
@@ -47,15 +47,13 @@ footer { max-width:720px; margin:20px auto; text-align:left; font-size:14px; }
 
 <div id="desc">
 <b>使い方</b><br>
-学習したい時間をおすと、タイマーがセットされます。<br>
+時計盤を押すと、タイマーがセットされます。<br>
 少しずつ時間がへっていくのが見えます。<br>
-一度セットしたタイマーは、再度押すことで残り時間を変更できます。<br>
 「固定」ボタンで誤操作を防げます。
 </div>
 
 <canvas id="timer"></canvas>
 
-<!-- ★ ボタンは時計の「下」へ -->
 <div id="controls">
   <button id="fsBtn">フルスクリーン</button>
   <button id="lockBtn">固定</button>
@@ -65,106 +63,121 @@ footer { max-width:720px; margin:20px auto; text-align:left; font-size:14px; }
 <footer>
 <h3>ご利用について</h3>
 <p>
-本ツールのご利用は完全に無料です。開発者はいかなる形でも対価を求めません。<br>
-商用利用も自由です。利用による損害について責任を負いません。
+本ツールのご利用は完全に無料です。商用利用も自由です。
 </p>
-
 <h3>権利表記</h3>
 <p>
-音源はオトロジック(CC BY 4.0)からお借りしました。  
-<a href="https://otologic.jp/" target="_blank">https://otologic.jp/</a>
+音源はオトロジック(CC BY 4.0)からお借りしました。
 </p>
 </footer>
 
 <script>
-const canvas=document.getElementById("timer");
-const ctx=canvas.getContext("2d");
-let locked=false,remain=0,last=0;
-const clickSound=new Audio("click.mp3");
-const finishSound=new Audio("finish.mp3");
+const canvas = document.getElementById("timer");
+const ctx = canvas.getContext("2d");
+let locked = false, remain = 0, last = 0;
 
-function resize(){
-  const v=window.visualViewport;
-  // 少し余白を持たせて数字が見切れないように
-  const size=Math.min(v.width, v.height*0.7);
-  canvas.width=canvas.height=size;
+// 音源（ファイル名が正しいか確認してください）
+const clickSound = new Audio("click.mp3");
+const finishSound = new Audio("finish.mp3");
+
+function resize() {
+  const v = window.visualViewport;
+  // 円盤を大きく（画面幅の95%か、高さの75%の小さい方）
+  const size = Math.min(v.width * 0.95, v.height * 0.75);
+  canvas.width = canvas.height = size;
   draw();
 }
-window.addEventListener("resize",resize);
+window.addEventListener("resize", resize);
 
-function draw(){
-  const r=canvas.width/2;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.translate(r,r);
+function draw() {
+  const r = canvas.width / 2;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(r, r);
+
+  const style = getComputedStyle(document.body);
+  const fg = style.getPropertyValue('--fg');
+  const arcColor = style.getPropertyValue('--arc');
 
   // 外枠
-  ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--fg');
-  ctx.lineWidth=4;
-  ctx.beginPath(); ctx.arc(0,0,r*0.80,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = fg;
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2); ctx.stroke();
 
   // 目盛り
-  for(let i=0;i<60;i++){
-    let a=i*Math.PI/30-Math.PI/2;
-    let len=i%5===0? r*0.12:r*0.06;
+  for (let i = 0; i < 60; i++) {
+    let a = i * Math.PI / 30 - Math.PI / 2;
+    let len = i % 5 === 0 ? r * 0.08 : r * 0.04;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*(r*0.65),Math.sin(a)*(r*0.65));
-    ctx.lineTo(Math.cos(a)*(r*0.65+len),Math.sin(a)*(r*0.65+len));
+    ctx.moveTo(Math.cos(a) * (r * 0.75), Math.sin(a) * (r * 0.75));
+    ctx.lineTo(Math.cos(a) * (r * 0.75 + len), Math.sin(a) * (r * 0.75 + len));
     ctx.stroke();
   }
 
-  // 円弧
-  if(remain>0){
-    ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--arc');
+  // 円弧（残り時間）
+  if (remain > 0) {
+    ctx.fillStyle = arcColor;
     ctx.beginPath();
-    ctx.moveTo(0,0);
-    ctx.arc(0,0,r*0.60,-Math.PI/2,-Math.PI/2+remain*6*Math.PI/180);
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, r * 0.73, -Math.PI / 2, -Math.PI / 2 + remain * 6 * Math.PI / 180);
     ctx.fill();
   }
 
   // 針
-  let a=-Math.PI/2+remain*6*Math.PI/180;
-  ctx.strokeStyle="red"; ctx.lineWidth=4;
+  let a = -Math.PI / 2 + remain * 6 * Math.PI / 180;
+  ctx.strokeStyle = "red"; ctx.lineWidth = 4;
   ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.lineTo(Math.cos(a)*r*0.55,Math.sin(a)*r*0.55);
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.cos(a) * r * 0.70, Math.sin(a) * r * 0.70);
   ctx.stroke();
-  ctx.fillStyle="red";
-  ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = "red";
+  ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
 
-  // 数字（さらに外側＆少し大きく）
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--fg');
-ctx.font = `${r * 0.12}px sans-serif`;
-for (let i = 0; i < 12; i++) {
-  let ang = i * Math.PI / 6 - Math.PI / 2;
-  let x = Math.cos(ang) * r * 0.90;
-  let y = Math.sin(ang) * r * 0.90;
-  let t = i * 5;
-  let w = ctx.measureText(t).width;
-  ctx.fillText(t, x - w / 2, y + 8);
+  // 数字
+  ctx.fillStyle = fg;
+  ctx.font = `bold ${r * 0.1}px sans-serif`;
+  for (let i = 0; i < 12; i++) {
+    let ang = i * Math.PI / 6 - Math.PI / 2;
+    let x = Math.cos(ang) * r * 0.92;
+    let y = Math.sin(ang) * r * 0.92;
+    let t = i * 5;
+    let w = ctx.measureText(t).width;
+    ctx.fillText(t, x - w / 2, y + (r * 0.04));
   }
 
-  ctx.setTransform(1,0,0,1,0,0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-canvas.onclick=e=>{
-  if(locked)return;
-  const r=canvas.width/2;
-  let x=e.offsetX-r,y=e.offsetY-r;
-  let a=Math.atan2(y,x)+Math.PI/2;
-  if(a<0)a+=Math.PI*2;
-  remain=Math.round(a*180/Math.PI/6);
+canvas.onclick = e => {
+  if (locked) return;
+
+  // ブラウザの音再生制限を解除するための儀式
+  clickSound.play().catch(() => {});
+  finishSound.pause(); 
+  finishSound.currentTime = 0;
+
+  const rect = canvas.getBoundingClientRect();
+  const r = canvas.width / 2;
+  let x = (e.clientX - rect.left) - r;
+  let y = (e.clientY - rect.top) - r;
+  let ang = Math.atan2(y, x) + Math.PI / 2;
+  if (ang < 0) ang += Math.PI * 2;
+  remain = Math.round(ang * 180 / Math.PI / 6);
+  
   clickSound.play();
+  draw();
 };
 
-function tick(t){
-  if(!last)last=t;
-  let d=(t-last)/1000; last=t;
-  if(remain>0){
-    remain-=d/60;
-    if(remain<=0){
-      remain=0;
-      finishSound.play();
-      navigator.vibrate?.([200,100,200]);
+function tick(t) {
+  if (!last) last = t;
+  let d = (t - last) / 1000;
+  last = t;
+
+  if (remain > 0) {
+    remain -= d / 60;
+    if (remain <= 0) {
+      remain = 0;
+      finishSound.play().catch(e => console.log("音再生エラー:", e));
+      if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
   }
   draw();
@@ -172,14 +185,23 @@ function tick(t){
 }
 requestAnimationFrame(tick);
 
-document.getElementById("lockBtn").onclick=()=>{
-  locked=!locked;
-  const b=document.getElementById("lockBtn");
-  b.textContent=locked?"固定中":"固定";
-  b.classList.toggle("locked",locked);
+document.getElementById("lockBtn").onclick = () => {
+  locked = !locked;
+  const b = document.getElementById("lockBtn");
+  b.textContent = locked ? "固定中" : "固定";
+  b.classList.toggle("locked", locked);
 };
-document.getElementById("modeBtn").onclick=()=>document.body.classList.toggle("dark");
-document.getElementById("fsBtn").onclick=()=>document.documentElement.requestFullscreen();
+document.getElementById("modeBtn").onclick = () => {
+  document.body.classList.toggle("dark");
+  draw();
+};
+document.getElementById("fsBtn").onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+};
 
 resize();
 </script>
