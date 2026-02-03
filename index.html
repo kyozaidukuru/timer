@@ -150,10 +150,19 @@ function draw() {
 canvas.onclick = e => {
   if (locked) return;
 
-  // ブラウザの音再生制限を解除するための儀式
+  // --- タブレット・スマホ向けの「音出し許可」の儀式 ---
+  // クリック音を鳴らす
+  clickSound.currentTime = 0;
   clickSound.play().catch(() => {});
-  finishSound.pause(); 
-  finishSound.currentTime = 0;
+
+  // 終了音を「一度再生してから即座に止める」ことで、ブラウザの制限を解除する
+  finishSound.play().then(() => {
+    finishSound.pause();
+    finishSound.currentTime = 0;
+  }).catch(() => {
+    // 初回クリック時はまだ再生できない場合があるためエラーを無視
+  });
+  // ----------------------------------------------
 
   const rect = canvas.getBoundingClientRect();
   const r = canvas.width / 2;
@@ -163,7 +172,6 @@ canvas.onclick = e => {
   if (ang < 0) ang += Math.PI * 2;
   remain = Math.round(ang * 180 / Math.PI / 6);
   
-  clickSound.play();
   draw();
 };
 
